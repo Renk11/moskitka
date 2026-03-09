@@ -2,13 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 
-if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-  return res.status(500).json({
-    ok: false,
-    error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
-  });
-}
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -23,6 +16,16 @@ app.get('/', (req, res) => {
 
 app.post('/send-order', async (req, res) => {
   try {
+    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
+      });
+    }
+
     const {
       name,
       phone,
@@ -74,18 +77,19 @@ app.post('/send-order', async (req, res) => {
       `💰 Сумма: ${total || 0} ₽`;
 
     const telegramResponse = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
+          chat_id: TELEGRAM_CHAT_ID,
           text,
         }),
       }
     );
 
     const telegramData = await telegramResponse.json();
+    console.log('Telegram response:', telegramData);
 
     if (!telegramData.ok) {
       return res.status(500).json({
@@ -99,7 +103,7 @@ app.post('/send-order', async (req, res) => {
       message: 'Заявка отправлена в Telegram',
     });
   } catch (error) {
-    console.error('Ошибка отправки заявки:', error);
+    console.error('SERVER ERROR:', error);
     return res.status(500).json({
       ok: false,
       error: error.message || 'Server error',
