@@ -69,12 +69,12 @@ app.post('/send-order', async (req, res) => {
       `💰 Сумма: ${total || 0} ₽`;
 
     const telegramResponse = await fetch(
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
+          chat_id: process.env.TELEGRAM_CHAT_ID,
           text,
         }),
       }
@@ -83,14 +83,13 @@ app.post('/send-order', async (req, res) => {
     const telegramData = await telegramResponse.json();
 
     if (!telegramData.ok) {
-      console.error('Telegram API error:', telegramData);
       return res.status(500).json({
         ok: false,
         error: telegramData.description || 'Telegram API error',
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       ok: true,
       message: 'Заявка отправлена в Telegram',
     });
@@ -101,8 +100,4 @@ app.post('/send-order', async (req, res) => {
       error: error.message || 'Server error',
     });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
 });

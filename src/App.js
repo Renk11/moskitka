@@ -533,67 +533,77 @@ export const App = () => {
   ]);
 
   const submitOrder = async () => {
-    if (!phone.trim()) {
-      alert('Укажите телефон');
-      return;
-    }
+  if (!phone.trim()) {
+    alert('Укажите телефон');
+    return;
+  }
 
-    if (!width.trim() || !height.trim()) {
-      alert('Укажите ширину и высоту');
-      return;
-    }
+  if (!width.trim() || !height.trim()) {
+    alert('Укажите ширину и высоту');
+    return;
+  }
 
-    try {
-      setIsSending(true);
+  try {
+    setIsSending(true);
 
-      const response = await fetch('http://localhost:3001/send-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await fetch('moskitka-production.up.railway.app/send-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        vkUserId: user?.id || null,
+        name: name || '-',
+        phone,
+        comment: comment || '-',
+        width: calc.safeWidth,
+        height: calc.safeHeight,
+        quantity: calc.safeQuantity,
+        meshType: MESH_TYPES[meshType].label,
+        profileType: PROFILE_TYPES[profileType].label,
+        frameColor: FRAME_COLORS[frameColor].label,
+        extras: {
+          handles: extraHandles,
+          crossbar: extraCrossbar,
+          zset: extraZset,
+          install: extraInstall,
         },
-        body: JSON.stringify({
-          vkUserId: user?.id || null,
-          name: name || '-',
-          phone,
-          comment: comment || '-',
-          width: calc.safeWidth,
-          height: calc.safeHeight,
-          quantity: calc.safeQuantity,
-          meshType: MESH_TYPES[meshType].label,
-          profileType: PROFILE_TYPES[profileType].label,
-          frameColor: FRAME_COLORS[frameColor].label,
-          extras: {
-            handles: extraHandles,
-            crossbar: extraCrossbar,
-            zset: extraZset,
-            install: extraInstall,
-          },
-          services: {
-            measureCity,
-            measureArea,
-            deliveryCity,
-            deliveryArea,
-          },
-          total: calc.total,
-        }),
-      });
+        services: {
+          measureCity,
+          measureArea,
+          deliveryCity,
+          deliveryArea,
+        },
+        total: calc.total,
+      }),
+    });
 
-      const data = await response.json();
+    const rawText = await response.text();
+    console.log('Server raw response:', rawText);
 
-      if (!response.ok || !data.ok) {
-        throw new Error(data?.error || 'Ошибка отправки');
+    let data = {};
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Сервер вернул не JSON: ${rawText}`);
       }
-
-      alert('Заявка отправлена в Telegram');
-      setPhone('');
-      setComment('');
-    } catch (error) {
-      console.error('Ошибка отправки заявки:', error);
-      alert(`Ошибка: ${error.message}`);
-    } finally {
-      setIsSending(false);
     }
-  };
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+
+    alert('Заявка отправлена в Telegram');
+    setPhone('');
+    setComment('');
+  } catch (error) {
+    console.error('Ошибка отправки заявки:', error);
+    alert(`Ошибка: ${error.message}`);
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const modal = (
     <ModalRoot activeModal={activeModal} onClose={() => setActiveModal(null)}>
