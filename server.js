@@ -4,8 +4,23 @@ import fetch from 'node-fetch';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Переменные из Railway
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+// CORS для запросов из VK Mini App
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 
 app.use(cors());
 app.use(express.json());
@@ -16,9 +31,6 @@ app.get('/', (req, res) => {
 
 app.post('/send-order', async (req, res) => {
   try {
-    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       return res.status(500).json({
         ok: false,
@@ -80,7 +92,9 @@ app.post('/send-order', async (req, res) => {
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHAT_ID,
           text,
@@ -104,9 +118,14 @@ app.post('/send-order', async (req, res) => {
     });
   } catch (error) {
     console.error('SERVER ERROR:', error);
+
     return res.status(500).json({
       ok: false,
       error: error.message || 'Server error',
     });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
 });
