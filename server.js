@@ -7,33 +7,44 @@ const PORT = process.env.PORT || 3001;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-// Разрешаем запросы с любых источников
 app.use((req, res, next) => {
+  console.log('--- NEW REQUEST ---');
+  console.log('Method:', req.method);
+  console.log('Path:', req.path);
   res.header('Access-Control-Allow-Origin', '*');
   next();
 });
 
-// Будем принимать plain text, а не application/json
 app.use(express.text({ type: '*/*' }));
 
 app.get('/', (req, res) => {
-  res.send('Telegram order server is running');
+  res.status(200).send('Telegram order server is running');
 });
 
 app.post('/send-order', async (req, res) => {
+  console.log('POST /send-order entered');
+
   try {
+    console.log('BOT TOKEN EXISTS:', !!TELEGRAM_BOT_TOKEN);
+    console.log('CHAT ID EXISTS:', !!TELEGRAM_CHAT_ID);
+
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      console.log('Missing env vars');
       return res.status(500).json({
         ok: false,
         error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
       });
     }
 
+    console.log('RAW BODY:', req.body);
+
     let body = {};
 
     try {
       body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    } catch {
+      console.log('PARSED BODY:', body);
+    } catch (parseError) {
+      console.error('JSON PARSE ERROR:', parseError);
       return res.status(400).json({
         ok: false,
         error: 'Некорректный JSON в body',
@@ -90,11 +101,15 @@ app.post('/send-order', async (req, res) => {
       `🚚 Сервис:\n${servicesText}\n\n` +
       `💰 Сумма: ${total || 0} ₽`;
 
+    console.log('MESSAGE READY');
+
     const telegramResponse = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHAT_ID,
           text,
@@ -102,8 +117,10 @@ app.post('/send-order', async (req, res) => {
       }
     );
 
+    console.log('TELEGRAM STATUS:', telegramResponse.status);
+
     const telegramData = await telegramResponse.json();
-    console.log('Telegram response:', telegramData);
+    console.log('TELEGRAM RESPONSE:', telegramData);
 
     if (!telegramData.ok) {
       return res.status(500).json({
@@ -117,8 +134,7 @@ app.post('/send-order', async (req, res) => {
       message: 'Заявка отправлена в Telegram',
     });
   } catch (error) {
-    console.error('SERVER ERROR:', error);
-
+    console.error('SERVER ERROR FULL:', error);
     return res.status(500).json({
       ok: false,
       error: error.message || 'Server error',
