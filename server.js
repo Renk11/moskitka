@@ -1,32 +1,129 @@
 import express from 'express';
-
-console.log('SERVER FILE LOADED');
+import fetch from 'node-fetch';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+// Разрешаем запросы с любых источников
 app.use((req, res, next) => {
-  console.log('MIDDLEWARE HIT:', req.method, req.path);
   res.header('Access-Control-Allow-Origin', '*');
   next();
 });
 
+// Будем принимать plain text, а не application/json
 app.use(express.text({ type: '*/*' }));
 
 app.get('/', (req, res) => {
-  console.log('GET / HIT');
-  res.status(200).send('Telegram order server is running');
+  res.send('Telegram order server is running');
 });
 
-app.post('/send-order', (req, res) => {
-  console.log('POST /send-order entered');
-  console.log('BODY TYPE:', typeof req.body);
-  console.log('BODY:', req.body);
+app.post('/send-order', async (req, res) => {
+  try {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
+      });
+    }
 
-  return res.status(200).json({
-    ok: true,
-    message: 'TEST_OK_FROM_RAILWAY',
-  });
+    let body = {};
+
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } catch {
+      return res.status(400).json({
+        ok: false,
+        error: 'Некорректный JSON в body',
+      });
+    }
+
+    const {
+      name,
+      phone,
+      comment,
+      width,
+      height,
+      quantity,
+      meshType,
+      profileType,
+      frameColor,
+      extras,
+      services,
+      total,
+    } = body;
+
+    const extrasText =
+      [
+        extras?.handles ? '• Ручки пластиковые 2 шт.' : null,
+        extras?.crossbar ? '• Поперечный профиль 1 шт.' : null,
+        extras?.zset ? '• Крепёж Z-образный металл. 4 шт.' : null,
+        extras?.install ? '• Установка' : null,
+      ]
+        .filter(Boolean)
+        .join('\n') || '—';
+
+    const servicesText =
+      [
+        services?.measureCity ? '• Выезд на замер Сыктывкар' : null,
+        services?.measureArea ? '• Выезд на замер Эжва, Выльгорт, Затон' : null,
+        services?.deliveryCity ? '• Доставка Сыктывкар' : null,
+        services?.deliveryArea ? '• Доставка Эжва, Выльгорт, Затон' : null,
+      ]
+        .filter(Boolean)
+        .join('\n') || '—';
+
+    const text =
+      `📩 Новая заявка с VK Mini App\n\n` +
+      `👤 Имя: ${name || '-'}\n` +
+      `📞 Телефон: ${phone || '-'}\n` +
+      `💬 Комментарий: ${comment || '-'}\n\n` +
+      `📐 Ширина: ${width || '-'} мм\n` +
+      `📐 Высота: ${height || '-'} мм\n` +
+      `🔢 Количество: ${quantity || '-'}\n` +
+      `🕸 Тип сетки: ${meshType || '-'}\n` +
+      `🪟 Профиль: ${profileType || '-'}\n` +
+      `🎨 Цвет рамки: ${frameColor || '-'}\n\n` +
+      `➕ Доборные элементы:\n${extrasText}\n\n` +
+      `🚚 Сервис:\n${servicesText}\n\n` +
+      `💰 Сумма: ${total || 0} ₽`;
+
+    const telegramResponse = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text,
+        }),
+      }
+    );
+
+    const telegramData = await telegramResponse.json();
+    console.log('Telegram response:', telegramData);
+
+    if (!telegramData.ok) {
+      return res.status(500).json({
+        ok: false,
+        error: telegramData.description || 'Telegram API error',
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Заявка отправлена в Telegram',
+    });
+  } catch (error) {
+    console.error('SERVER ERROR:', error);
+
+    return res.status(500).json({
+      ok: false,
+      error: error.message || 'Server error',
+    });
+  }
 });
 
 app.listen(PORT, () => {
