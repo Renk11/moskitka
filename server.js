@@ -21,20 +21,24 @@ app.get('/', (req, res) => {
   res.status(200).send('Telegram order server is running');
 });
 
-app.post('/send-order', async (req, res) => {
-  console.log('POST /send-order entered');
-
+app.post('/send-order', (req, res) => {
   try {
-    console.log('BOT TOKEN EXISTS:', !!TELEGRAM_BOT_TOKEN);
-    console.log('CHAT ID EXISTS:', !!TELEGRAM_CHAT_ID);
+    console.log('POST /send-order entered');
+    console.log('BODY TYPE:', typeof req.body);
+    console.log('BODY:', req.body);
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      console.log('Missing env vars');
-      return res.status(500).json({
-        ok: false,
-        error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
-      });
-    }
+    return res.status(200).json({
+      ok: true,
+      message: 'TEST_OK_FROM_RAILWAY',
+    });
+  } catch (error) {
+    console.error('TEST ROUTE ERROR:', error);
+    return res.status(500).json({
+      ok: false,
+      error: error.message || 'Test route error',
+    });
+  }
+});
 
     console.log('RAW BODY:', req.body);
 
