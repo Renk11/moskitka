@@ -2,10 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 
+if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  return res.status(500).json({
+    ok: false,
+    error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
+  });
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// ВСТАВЬ СВОИ ДАННЫЕ
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
