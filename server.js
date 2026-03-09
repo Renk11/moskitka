@@ -1,29 +1,20 @@
 import express from 'express';
-import cors from 'cors';
 import fetch from 'node-fetch';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Переменные из Railway
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-// CORS для запросов из VK Mini App
+// Разрешаем запросы с любых источников
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-
   next();
 });
 
-app.use(cors());
-app.use(express.json());
+// Будем принимать plain text, а не application/json
+app.use(express.text({ type: '*/*' }));
 
 app.get('/', (req, res) => {
   res.send('Telegram order server is running');
@@ -35,6 +26,17 @@ app.post('/send-order', async (req, res) => {
       return res.status(500).json({
         ok: false,
         error: 'Не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID',
+      });
+    }
+
+    let body = {};
+
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } catch {
+      return res.status(400).json({
+        ok: false,
+        error: 'Некорректный JSON в body',
       });
     }
 
@@ -51,7 +53,7 @@ app.post('/send-order', async (req, res) => {
       extras,
       services,
       total,
-    } = req.body;
+    } = body;
 
     const extrasText =
       [
@@ -92,9 +94,7 @@ app.post('/send-order', async (req, res) => {
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: TELEGRAM_CHAT_ID,
           text,

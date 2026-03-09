@@ -549,9 +549,9 @@ export const App = () => {
     const response = await fetch('https://moskitka-production.up.railway.app/send-order', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  'Content-Type': 'text/plain',
+},
+body: JSON.stringify({
         vkUserId: user?.id || null,
         name: name || '-',
         phone,
