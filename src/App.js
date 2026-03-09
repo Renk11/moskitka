@@ -546,7 +546,7 @@ export const App = () => {
   try {
     setIsSending(true);
 
-    const response = await fetch('moskitka-production.up.railway.app/send-order', {
+    const response = await fetch('https://moskitka-production.up.railway.app/send-order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
